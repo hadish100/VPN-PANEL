@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>LOGIN</title>
+    <meta name="viewport" content="width=1280">
+	<meta name="description" content="">
+	<meta name="keywords" content="">
+	<meta name="author" content="hadish">
+	<link rel="icon" href="images/i.png">
+	<script src="js/jquery.js"></script>
+	<script src="js/scripts.js"></script>
+
+
+</head>
+
+<body>
+
+<div class="login_container">
+
+	<div class="login_box">
+	<input class="login_username" type="text" placeholder="نام کاربری" >
+	<input class="login_password" type="password" placeholder="رمز عبور" >
+	<div class="login_btn">ورود</div>
+	<div class="relative-error">نام کاربری یا رمز عبور اشتباه است</div>
+	</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+var socket = io();
+
+$(".login_btn").click(function()
+{
+	if($(".login_username").val() && $(".login_password").val())
+	{
+
+		data =
+		{
+		username:$(".login_username").val(),
+		password:$(".login_password").val()
+		};
+
+		$.ajax
+		({
+			url: HOST_ADDR + "/validate_login",
+			type: "POST",
+			data:data,
+			success: function(res) 
+			{
+				if(res==0) $(".relative-error").css("opacity","1");
+				else if(res==1) window.location.href = "panel";
+				else window.location.href = "admin";
+			}
+		});
+		
+
+
+	}
+
+});
+
+</script>
+
+</body>
+
+</html>

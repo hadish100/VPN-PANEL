@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<link rel="stylesheet" type="text/css" href="css/animate.css">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>ADMIN PANEL</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="">
+	<meta name="keywords" content="">
+	<meta name="author" content="hadish">
+	<link rel="icon" href="images/i.png">
+	<script src="js/jquery.js"></script>
+	<script src="js/scripts.js"></script>
+
+</head>
+
+<body>
+
+	<div class="logout" >
+		<a href="/login">
+			<img src="images/logout.png" title="خروج" >
+		</a>
+	</div>
+
+	<div class="flexor-container-1">
+	
+	<div class="flexor1" >
+		{{#panels_obj}}
+		<div class="panel" onclick="get_panel({{id}})" ><span>{{name}}</span> <span class="explicit_balance" >{{data_size}} GB</span> </div>
+		{{/panels_obj}}
+	</div>
+
+	<div class="flexor2_container">
+		<div class="flexor2">
+		<input type="text" class="panel_input" placeholder="نام نماینده" >
+		<img onclick="add_panel()" src="images/plus.png">
+		</div>
+
+		<div class="dbdl" > <img title="بکاپ گیری از دیتابیس" src="images/dbdl.png" > </div>
+
+	</div>
+	</div>
+
+	<div class="flexor-container-2">
+		<div class="flexor3" > 
+			<span>پنل ها</span> 
+
+
+			<div class="marzbans_container" >
+			{{#marzbans_obj}}
+			<div class="marzban_panel" marzban_id="{{id}}" onclick="get_marzban({{id}})" > <img class="delete_marzban_pnl dmp{{id}}" onclick="dmp({{id}})" src="images/delete.png"> <span class="marzban_panel_name" >{{name}}</span>  <span class="marzban_data_usage" >{{data_usage}} GB</span>  <span class="marzban_capacity" >{{current_users}}({{users_active}})/{{max_users}}</span> <img class="connection_status connection_status{{connected}}" src="images/wifi.png"> </div>
+			{{/marzbans_obj}}
+			</div>
+
+			<div class="new_marzban" >
+			<img class="add_marzban" src="images/plus2.png" >
+
+
+			<input type="text" class="marzban_name"  placeholder="نام پنل">
+			<input type="text" class="marzban_username" placeholder="نام کاربری">
+			<input type="text" class="marzban_password" placeholder="رمز عبور">
+			<input type="text" class="marzban_max_users" placeholder="ظرفیت">
+			<input type="text" class="marzban_country" placeholder="کشور">
+			<input type="text" class="marzban_link" placeholder="لینک">
+
+			<div class="save_marzban" >	<img src="images/accept.png"> </div>
+			</div>
+		</div>
+	</div>
+
+<div class="hl_popup_flexor" >
+<div class="hl_popup_bg" ></div>
+<div class="hl_popup_main" >
+<img class="hl_popup_close" src="images/hl_close.png" onclick="hl_popup_close()" >
+
+<div class="panel_field" >
+<span>: نام نماینده</span>
+<input type="text" class="panel_name" >
+</div>
+
+<div class="panel_field" >
+<span>: نام کاربری</span>
+<input type="text" class="panel_username" >
+</div>
+
+<div class="panel_field" >
+<span>: رمز عبور</span>
+<input type="text" class="panel_password" >
+</div>
+
+<div class="panel_field" >
+<span>: حجم</span>
+<input type="text" class="panel_data_size" >
+</div>
+
+<div class="panel_field" >
+<span>: حداکثر روز</span>
+<input type="text" class="panel_max_days" >
+</div>
+
+<div class="panel_field" >
+<span>: پیشوند</span>
+<input type="text" class="panel_prefix" >
+</div>
+
+<div class="panel_field" >
+<span>: کشور</span>
+<input type="text" class="panel_country" >
+
+<div class="country_selection"></div>
+
+</div>
+
+
+<div class="make_changes_to_panel">
+
+	<div onclick="save_changes()" class="confirm_changes"> <img src="images/accept.png"> </div>
+	<div onclick="delete_panel()" class="delete_panel"> <img src="images/delete.png"> </div>
+	<div onclick="enter_panel()" class="enter_panel"> <img src="images/enter.png"> </div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+
+var socket = io();
+var change_id = 0;
+var marzban_change_id = 0;
+var marzban_edit_mode = 0;
+var available_countries = {{{available_countries}}};
+
+for(var i=0;i<available_countries.length;i++)
+{
+	document.querySelectorAll(".country_selection")[0].innerHTML += "<div>"+available_countries[i]+"</div>"
+}
+
+var last_click = Date.now();
+
+function toggle_marzban_fields()
+{
+
+
+	if( Date.now() - last_click >= 100 )
+	{
+		if($(".new_marzban").hasClass("opened"))
+		{
+		$(".new_marzban").removeClass("opened");
+		$(".new_marzban").css("height","50px");
+		$(".add_marzban").css("transform","rotate(0deg)");
+		$(".delete_marzban_pnl").css("transform","scale(0)");
+		}
+
+		else
+		{
+		$(".new_marzban").addClass("opened");
+		$(".new_marzban").css("height","320px");
+		$(".add_marzban").css("transform","rotate(45deg)");
+		}
+	}
+
+last_click = Date.now();
+
+}
+
+
+function e2p(num)
+{
+var persian_numbers = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
+return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",").replace(/\d/g,function(i){ return persian_numbers[i]}) 
+}
+
+function e2p_alt(num)
+{
+var persian_numbers = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
+return num.toString().replace(/\d/g,function(i){ return persian_numbers[i]});
+}
+
+	if(document.querySelector(".explicit_balance")) 
+	{
+		for(var i=0;i<document.querySelectorAll(".explicit_balance").length;i++)
+		{
+		document.querySelectorAll(".explicit_balance")[i].innerHTML = e2p_alt(document.querySelectorAll(".explicit_balance")[i].innerHTML); 
+		}
+	}
+
+	if(document.querySelector(".marzban_panel")) 
+	{
+		for(var i=0;i<document.querySelectorAll(".marzban_panel").length;i++)
+		{
+		document.querySelectorAll(".marzban_panel .marzban_panel_name")[i].innerHTML = e2p_alt(document.querySelectorAll(".marzban_panel .marzban_panel_name")[i].innerHTML); 
+		document.querySelectorAll(".marzban_panel .marzban_capacity")[i].innerHTML = e2p_alt(document.querySelectorAll(".marzban_panel .marzban_capacity")[i].innerHTML); 
+		document.querySelectorAll(".marzban_panel .marzban_data_usage")[i].innerHTML = e2p_alt(document.querySelectorAll(".marzban_panel .marzban_data_usage")[i].innerHTML); 
+		}
+	}
+
+function add_panel()
+{
+var name = document.querySelector(".panel_input").value;
+	if(name)
+	{
+	socket.emit("add_panel",name);
+	document.querySelector(".panel_input").value = '';
+	}
+}
+
+
+socket.on("add_panel_done",panels_list=>
+{
+	document.querySelector(".flexor1").innerHTML = '';
+	for(var i=0;i<panels_list.length;i++)
+	{
+	document.querySelector(".flexor1").innerHTML += '<div onclick="get_panel('+panels_list[i].id+')" class="panel"><span>'+e2p_alt(panels_list[i].name)+'</span> <span class="explicit_balance" >'+panels_list[i].data_size+' GB</span> </div>';
+	}
+	bind_click();
+});
+
+
+function bind_click()
+{
+	if(document.querySelector(".explicit_balance")) 
+	{
+		for(var i=0;i<document.querySelectorAll(".explicit_balance").length;i++)
+		{
+		document.querySelectorAll(".explicit_balance")[i].innerHTML = e2p_alt(document.querySelectorAll(".explicit_balance")[i].innerHTML); 
+		document.querySelectorAll(".panel")[i].innerHTML = e2p_alt(document.querySelectorAll(".panel")[i].innerHTML); 
+		}
+	}
+
+	$(".marzban_panel").click(function()
+	{
+	$(this).css("border","3px solid #009bff");
+	$(".marzban_panel").not(this).css("border","3px solid transparent");
+	});
+
+}
+
+var get_panel = (id) =>
+{
+change_id = id;
+socket.emit("fetch_panel",change_id);
+}
+
+
+socket.on("fetch_panel_done",panel_data=>
+{
+	$(".panel_name").val(panel_data["name"]);
+	$(".panel_data_size").val(panel_data["data_size"]);
+	$(".panel_max_days").val(panel_data["max_days"]);
+	$(".panel_username").val(panel_data["username"]);
+	$(".panel_password").val(panel_data["password"]);
+	$(".panel_country").val(panel_data["country"]);
+	$(".panel_prefix").val(panel_data["prefix"]);
+
+	for(var i=0;i<available_countries.length;i++)
+	{
+		if(panel_data["country"].split(",").includes(available_countries[i]))
+		{
+			$(".country_selection div").eq(i).addClass("country_item_activated");
+		}
+
+		else
+		{
+			$(".country_selection div").eq(i).removeClass("country_item_activated");
+		}
+	}
+
+	hl_popup_open();
+});
+
+function save_changes()
+{
+	var data = 
+	{
+	id:change_id,
+	name:$(".panel_name").val(),
+	data_size:$(".panel_data_size").val(),
+	max_days:$(".panel_max_days").val(),
+	username:$(".panel_username").val(),
+	password:$(".panel_password").val(),
+	prefix:$(".panel_prefix").val(),
+	country:$(".panel_country").val()
+	};
+	socket.emit("save_changes",data);	
+}
+
+function enter_panel()
+{
+	if($(".panel_username").val() && $(".panel_password").val())
+	{
+
+		data =
+		{
+		username:$(".panel_username").val(),
+		password:$(".panel_password").val()
+		};
+
+		$.ajax
+		({
+			url: HOST_ADDR + "/validate_login",
+			type: "POST",
+			data:data,
+			success: function(res) 
+			{
+				if(res==0) $(".relative-error").css("opacity","1");
+				else if(res==1) window.location.href = "panel";
+				else window.location.href = "admin";
+			}
+		});
+
+	}
+}
+
+$(".country_selection div").click(function()
+{
+	if($(this).hasClass("country_item_activated"))
+	{
+		$(this).removeClass("country_item_activated");
+		var cntry_arr = $(".panel_country").val().split(",");
+		cntry_arr.splice(cntry_arr.indexOf($(this).html()),1);
+		cntry_arr = cntry_arr.filter(Boolean);
+		$(".panel_country").val(cntry_arr.join(","));
+	}
+
+	else
+	{
+		$(this).addClass("country_item_activated");
+		var cntry_arr = $(".panel_country").val().split(",");
+		cntry_arr.push($(this).html());
+		cntry_arr = cntry_arr.filter(Boolean);
+		$(".panel_country").val(cntry_arr.join(","));
+	}
+});
+
+$(".dbdl").click(function()
+{
+	window.open(HOST_ADDR + "/dldb");
+});
+
+function delete_panel()
+{
+	socket.emit("delete_panel",change_id);	
+}
+
+socket.on("save_changes_done",(res)=>
+{
+	hl_popup_close();
+});
+
+socket.on("delete_panel_done",(res)=>
+{
+	hl_popup_close();
+});
+
+
+bind_click();
+
+
+$(".add_marzban").click(function()
+{
+marzban_edit_mode = 0;
+
+	$(".marzban_name").val('');
+	$(".marzban_username").val('');
+	$(".marzban_password").val('');
+	$(".marzban_max_users").val('');
+	$(".marzban_country").val('');
+	$(".marzban_link").val('');
+
+
+	toggle_marzban_fields();
+
+	$(".marzban_panel").css("border","3px solid transparent");
+});
+
+function dmp(id)
+{
+	socket.emit("dmp",id);
+}
+
+
+$(".save_marzban").click(function()
+{
+if(marzban_edit_mode==0)
+{
+	if($(".marzban_name").val())
+	{
+
+		var data =
+		{
+		marzban_name:$(".marzban_name").val(),
+		marzban_username:$(".marzban_username").val(),
+		marzban_password:$(".marzban_password").val(),
+		marzban_max_users:$(".marzban_max_users").val(),
+		marzban_country:$(".marzban_country").val(),
+		marzban_link:$(".marzban_link").val()
+		};
+
+		socket.emit("save_marzban",data);
+		
+	}
+}
+
+else
+{
+
+	if($(".marzban_name").val())
+	{
+
+		var data =
+		{
+		id:marzban_change_id,
+		marzban_name:$(".marzban_name").val(),
+		marzban_username:$(".marzban_username").val(),
+		marzban_password:$(".marzban_password").val(),
+		marzban_max_users:$(".marzban_max_users").val(),
+		marzban_country:$(".marzban_country").val(),
+		marzban_link:$(".marzban_link").val()
+		};
+
+		socket.emit("update_marzban",data);
+		
+	}
+
+}
+
+
+
+});
+
+
+socket.on("save_marzban_done",(marzban_panels)=>
+{
+document.querySelector(".marzbans_container").innerHTML = '';
+for(var i=0;i<marzban_panels.length;i++)
+{
+document.querySelector(".marzbans_container").innerHTML += '<div class="marzban_panel" marzban_id="'+marzban_panels[i].id+'" onclick="get_marzban('+marzban_panels[i].id+')" > <img class="delete_marzban_pnl dmp'+marzban_panels[i].id+'" onclick="dmp('+marzban_panels[i].id+')" src="images/delete.png"> <span class="marzban_panel_name" >'+e2p_alt(marzban_panels[i].name)+'</span> <span class="marzban_data_usage" >'+e2p_alt(marzban_panels[i].data_usage)+' GB</span>  <span class="marzban_capacity" >'+e2p_alt(marzban_panels[i].current_users)+'('+e2p_alt(marzban_panels[i].users_active)+')/'+e2p_alt(marzban_panels[i].max_users)+'</span> <img class="connection_status connection_status'+marzban_panels[i].connected+'" src="images/wifi.png"> </div>';
+}
+
+toggle_marzban_fields();
+
+
+
+$(".marzban_panel").css("border","3px solid transparent");
+
+
+
+bind_click();
+});
+
+
+socket.on("update_marzban_done",(marzban_panels)=>
+{
+	document.querySelector(".marzbans_container").innerHTML = '';
+	for(var i=0;i<marzban_panels.length;i++)
+	{
+	document.querySelector(".marzbans_container").innerHTML += '<div class="marzban_panel" marzban_id="'+marzban_panels[i].id+'" onclick="get_marzban('+marzban_panels[i].id+')" > <img class="delete_marzban_pnl dmp'+marzban_panels[i].id+'" onclick="dmp('+marzban_panels[i].id+')" src="images/delete.png"> <span class="marzban_panel_name" >'+e2p_alt(marzban_panels[i].name)+'</span> <span class="marzban_data_usage" >'+e2p_alt(marzban_panels[i].data_usage)+' GB</span>  <span class="marzban_capacity" >'+e2p_alt(marzban_panels[i].current_users)+'('+e2p_alt(marzban_panels[i].users_active)+')/'+e2p_alt(marzban_panels[i].max_users)+'</span> <img class="connection_status connection_status'+marzban_panels[i].connected+'" src="images/wifi.png"> </div>';
+	}
+
+	toggle_marzban_fields();
+
+
+	bind_click();
+});
+
+var get_marzban = (id) =>
+{
+marzban_change_id = id;
+marzban_edit_mode = 1;
+
+socket.emit("fetch_marzban",marzban_change_id)
+
+}
+
+
+socket.on("fetch_marzban_done",marzban_data=>
+{
+$(".marzban_name").val(marzban_data['name']);
+$(".marzban_username").val(marzban_data['username']);
+$(".marzban_password").val(marzban_data['password']);
+$(".marzban_max_users").val(marzban_data['max_users']);
+$(".marzban_country").val(marzban_data['country']);
+$(".marzban_link").val(marzban_data['link']);
+
+if( Date.now() - last_click >= 100 )
+{
+	if(!$(".new_marzban").hasClass("opened"))
+	{
+	$(".new_marzban").addClass("opened");
+	$(".new_marzban").css("height","320px");
+	$(".add_marzban").css("transform","rotate(45deg)");
+	}
+}
+
+last_click = Date.now();
+
+$(".delete_marzban_pnl").css("transform","scale(0)");
+$(".dmp"+marzban_data['id']).css("transform","scale(1)");
+
+});
+
+
+$(".marzban_panel").click(function()
+{
+$(this).css("border","3px solid #009bff");
+$(".marzban_panel").not(this).css("border","3px solid transparent");
+});
+
+
+</script>
+
+</body>
+
+</html>

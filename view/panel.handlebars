@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>VPN PANEL</title>
+    <meta name="viewport" content="width=1280">
+	<meta name="description" content="">
+	<meta name="keywords" content="">
+	<meta name="author" content="hadish">
+	<link rel="icon" href="images/i.png">
+	<script src="js/jquery.js"></script>
+	<script src="js/scripts.js"></script>
+	<script type="text/javascript" src="js/qrcode.js"></script>
+
+</head>
+
+<body style="flex-direction:column;" >
+
+		<div class="logout" >
+			<a href="/login">
+				<img src="images/logout.png" title="خروج" >
+			</a>
+		</div>
+
+<img src="images/add_cancel.png" style="width:0px;position:absolute;visibility:hidden;" >
+
+<div class="panel_header" >
+
+	<div class="panel_header_box">
+	<span class="panel_header_property" >: تعداد کاربران</span>
+	<span class="panel_header_user_num" >۰</span>
+	</div>
+
+	<div class="panel_header_box">
+	<span class="panel_header_property" >: حجم مصرف شده</span>
+	<span class="panel_header_data_used" >۰ GB</span>
+	</div>
+
+	<div class="panel_header_box">
+	<span class="panel_header_property" >: حجم قابل تخصیص</span>
+	<span class="panel_header_data_usable" >۰ GB</span>
+	</div>
+
+	<div class="panel_header_box">
+	<span class="panel_header_property" >: حجم باقی مانده</span>
+	<span class="panel_header_remained_data" >۰ GB</span>
+	</div>
+
+</div>
+
+<div class="users_section">
+
+<div class="filter_section">
+
+	<div class="pagination_section">
+		<img class="next_page" src="images/arrow.png">
+		<div class="page_list">
+
+			<div class="page_floating_bar">
+
+			</div>
+
+		</div>
+		<img class="prev_page" src="images/arrow.png">
+	</div>
+
+
+	<div class="search_section" >
+	<input class="search" type="text" placeholder="جست و جو" >
+	<img src="images/search.png">
+	</div>
+
+	<div class="show_only show_only_disabled">اکانت های غیرفعال</div>
+	<div class="show_only show_only_expired">اکانت های منقضی</div>
+</div>
+
+	<div class="users_flexor" >
+		<div class="users_flexor_header_container">
+		<div class="users_flexor_header">
+	<span> <span>نام کاربری</span> <img src="images/id.png"> </span>
+	<span>	<span>زمان باقی مانده</span> <img src="images/clock.png"> </span>
+	<span>	<span>حجم مصرف شده</span>  <img src="images/download.png"> </span>
+	<span>	<span>عملیات</span> <img src="images/settings.png"> </span>
+		</div>
+	</div>
+		
+		<div class="user_vpn_container">
+
+		</div> 
+
+			<div class="new_user_form_container" > 
+				<div class="new_user_form">
+				<input type="text" class="username" placeholder="نام کاربری" > 
+				<input type="text" class="days" placeholder="تعداد روز" > 
+				<input type="text" class="data_limit" placeholder="حجم ( گیگ )" > 
+				<div class="country_fake_input country_fake_input_active" >کشور</div>
+				<input type="text" class="country" placeholder="کشور" style="display:none;" > 
+				<img class="save_vpn" src="images/accept.png"> 
+				</div>
+			</div>
+
+	</div>
+
+</div>
+
+
+<img class="add_new_user" src="images/add.png" >
+
+<div class="alerter">
+<span></span>
+</div> 
+
+<div class="qrcode_container" >
+	<div class="qrcode_background"></div>
+	<div class="qrcode_box">
+		<div class="qrcode_counter"></div>
+		<img class="qrcode_next qrcode_navigator" src="images/arrow.png">
+		<div class="qrcodes">
+			<div class="qrcodes_inner">
+				<div class="qrcode"></div>
+				<div class="qrcode"></div>
+				<div class="qrcode"></div>
+				<div class="qrcode"></div>
+				<div class="qrcode"></div>
+				<div class="qrcode"></div>
+				<div class="qrcode"></div>
+			</div>
+		</div>
+		<img class="qrcode_previous qrcode_navigator" src="images/arrow.png">
+	</div>
+</div>
+
+
+<div class="step_two_container">
+	<div class="step_two_background"></div>
+	<div class="step_two_box" >
+	<span>آیا از حذف اکانت اطمینان دارید ؟</span>
+	<div class="step_two_choose">
+		<div onclick="resume_delete()" ><img class="resume_delete" src="images/accept.png"></div> <div onclick="cancel_delete()" ><img class="cancel_delete" src="images/add_cancel.png"></div>
+	</div>
+	</div>
+</div>
+
+
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+
+var socket = io();
+var panel_id = {{{panel_id}}};
+var panel_obj_start = {{{panel_obj_start}}};
+var marzban_obj_start = {{{marzban_obj_start}}};
+var vpn_edit_mode = 0;
+var vpn_edit_id = 0;
+var marzban_edit_id = 0;
+var on_page = 1;
+var pages_number = {{{pages_number}}};
+
+for(var i=0;i<pages_number;i++)
+{
+document.querySelector(".page_floating_bar").innerHTML += `<div onclick="set_page(${i+1})" >${i+1}</div>`
+}
+
+document.querySelector(".panel_header_user_num").innerHTML = {{{accounts_count}}};
+
+function set_page(x)
+{
+
+	on_page = x;
+	
+	if(x>2) $(".page_list .page_floating_bar").css("transform","translate(-"+(x-2)*50+"px)");
+	if(x<=2) $(".page_list .page_floating_bar").css("transform","translate(0)");
+
+	socket.emit("render_page",{on_page,panel_id});
+
+	for(var i=0;i<document.querySelectorAll(".page_list .page_floating_bar div").length;i++)
+	{
+		
+		if(i!=x-1)
+		{
+			$(".page_list .page_floating_bar div").eq(i).css("transform","scale(0.8)");	
+			$(".page_list .page_floating_bar div").eq(i).css("opacity","0.6");	
+		}
+
+		else
+		{
+			$(".page_list .page_floating_bar div").eq(i).css("transform","scale(1)");	
+			$(".page_list .page_floating_bar div").eq(i).css("opacity","1");			
+		}
+	}
+
+}
+
+$(".next_page").click(function()
+{
+	if(on_page < pages_number) set_page(on_page+1);
+});
+
+$(".prev_page").click(function()
+{
+	if(on_page > 1) set_page(on_page-1);
+});
+
+set_page(1);
+
+for(var i=0;i<document.querySelectorAll(".page_list .page_floating_bar div").length;i++)
+{
+	document.querySelectorAll(".page_list .page_floating_bar div")[i].innerHTML = e2p(document.querySelectorAll(".page_list .page_floating_bar div")[i].innerHTML);
+}
+
+
+$(".search").on("keyup",function()
+{
+
+	setTimeout(function()
+	{
+		var val = $(".search").val();
+
+			for(var i=0;i<document.querySelectorAll(".user_vpn").length;i++)
+			{
+				document.querySelectorAll(".user_vpn")[i].style.display = "flex";
+			}
+
+
+		if(val)
+		{
+			for(var i=0;i<document.querySelectorAll(".user_vpn").length;i++)
+			{
+				if( !document.querySelectorAll(".user_vpn_name_txt")[i].innerHTML.includes(val) )
+						document.querySelectorAll(".user_vpn_name")[i].parentElement.style.display = "none";
+			}
+		}
+
+	},500);
+
+
+
+});
+
+
+$(".show_only_disabled").click(function()
+{
+	if($(".show_only_disabled").hasClass("show_only_activated"))
+	{
+		$(".show_only_disabled").removeClass("show_only_activated");
+		$(".show_only_disabled").css("filter","grayscale(100%)");
+
+			for(var i=0;i<document.querySelectorAll(".user_vpn").length;i++)
+			{
+				document.querySelectorAll(".user_vpn")[i].style.display = "flex";
+			}
+	}
+		
+	else
+	{
+		$(".show_only_disabled").addClass("show_only_activated");
+		$(".show_only_disabled").css("filter","grayscale(0%)");
+
+			for(var i=0;i<document.querySelectorAll(".user_vpn").length;i++)
+			{
+				if(!document.querySelectorAll(".user_vpn")[i].classList.contains("vpn_status0"))
+					document.querySelectorAll(".user_vpn")[i].style.display = "none";
+			}
+
+	}
+});
+
+$(".show_only_expired").click(function()
+{
+
+	if($(".show_only_expired").hasClass("show_only_activated"))
+	{
+		$(".show_only_expired").removeClass("show_only_activated");
+		$(".show_only_expired").css("filter","grayscale(100%)");
+
+			for(var i=0;i<document.querySelectorAll(".user_vpn").length;i++)
+			{
+					document.querySelectorAll(".user_vpn")[i].style.display = "flex";
+			}
+	}
+		
+	else
+	{
+		$(".show_only_expired").addClass("show_only_activated");
+		$(".show_only_expired").css("filter","grayscale(0%)");
+
+			for(var i=0;i<document.querySelectorAll(".user_vpn").length;i++)
+			{
+				if(!document.querySelectorAll(".user_vpn")[i].classList.contains("vpn_status2"))
+					document.querySelectorAll(".user_vpn")[i].style.display = "none";
+			}
+
+	}
+
+
+});
+
+
+
+
+function e2p(num)
+{
+	var persian_numbers = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
+	return num.toString().replace(/\d/g,function(i){ return persian_numbers[i]});
+}
+
+function p2e(num)
+{
+	var conv = {'۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','۰':'0'};
+
+	var res = num.split("").map(x => 
+	{
+		if(conv[x]) return conv[x];
+		else return x;
+	}).join("");
+
+	return res;	
+}
+
+function farsify()
+{
+	if(document.querySelectorAll(".user_vpn_days"))
+	{
+		for(var i=0;i<document.querySelectorAll(".user_vpn_days").length;i++)
+		{
+			document.querySelectorAll(".user_vpn_days")[i].innerHTML = e2p(document.querySelectorAll(".user_vpn_days")[i].innerHTML);
+			document.querySelectorAll(".user_vpn_data")[i].innerHTML = e2p(document.querySelectorAll(".user_vpn_data")[i].innerHTML);
+		}
+	}
+document.querySelector(".panel_header_user_num").innerHTML = e2p(document.querySelector(".panel_header_user_num").innerHTML);
+}
+
+
+refresh_list(panel_obj_start);
+
+
+
+function toggle_user_vpn_fields()
+{
+	if($(".add_new_user").hasClass("is_adding_user"))
+	{
+	$(".add_new_user").css("transform","rotate(0deg)");
+	$(".add_new_user").removeClass("is_adding_user");
+	$(".add_new_user").attr("src","images/add.png");
+	$(".new_user_form").css('bottom','-100px');
+	$(".user_vpn").css("border","3px solid transparent");
+	$(".days").val('');$(".data_limit").val('');$(".username").val('');$(".country_fake_input_active").html('کشور');$(".country").val('');
+	vpn_edit_mode = 0;
+	document.querySelector(".username").disabled = false;
+	$(".country_fake_input").addClass("country_fake_input_active");
+	$(".country").val('');
+	$(".country_fake_input").html('کشور');
+	}
+
+	else
+	{
+	$(".add_new_user").css("transform","rotate(45deg)");
+	$(".add_new_user").addClass("is_adding_user");
+	$(".add_new_user").attr("src","images/add_cancel.png");
+	$(".new_user_form").css('bottom','0px');
+	}
+}
+
+
+$(".add_new_user").click(function()
+{
+toggle_user_vpn_fields();
+});
+
+var ci = 0;
+
+$(".country_fake_input_active").click(function()
+{
+var arr = panel_obj_start.country.split(",");
+console.log(ci);
+$(".country_fake_input_active").html(arr[(ci)%arr.length]);
+$(".country").val(arr[(ci)%arr.length]);
+ci++;
+});
+
+
+
+function get_vpn(num,num2)
+{
+socket.emit("get_vpn",{panel_id:panel_id,vpn_id:num});
+vpn_edit_mode = 1;
+document.querySelector(".username").disabled = true;
+$(".country_fake_input").removeClass("country_fake_input_active");
+vpn_edit_id = num;
+marzban_edit_id = num2;
+if(!$(".add_new_user").hasClass("is_adding_user")) toggle_user_vpn_fields();
+$(".user_vpn").css("border","3px solid transparent");
+$(".user_vpn[vpn_id='"+num+"']").css("border","3px solid #009bff");
+}
+
+
+$(".save_vpn").click(function()
+{
+
+	if($(".username").val() && $(".data_limit").val() && $(".days").val() && $(".country").val())
+	{
+		var data =
+		{
+			account_data:
+			{
+			username:$(".username").val(),
+			data_limit:Number($(".data_limit").val()),
+			days:Number($(".days").val()),
+			country:$(".country").val(),
+			data_used:0
+			},
+			panel_id:panel_id,
+			vpn_edit_id:vpn_edit_id,
+			on_page:on_page,
+			marzban_edit_id:marzban_edit_id
+		};
+
+		if(!vpn_edit_mode) socket.emit("add_user",data);
+		else socket.emit("edit_user",data);
+	}
+
+});
+
+
+	socket.on("add_user_done",(vpn_data)=>
+	{
+		toggle_user_vpn_fields();
+		refresh_list(vpn_data);
+	});
+
+	socket.on("edit_user_done",(vpn_data)=>
+	{
+		toggle_user_vpn_fields();
+		refresh_list(vpn_data);
+	});
+
+	socket.on("get_vpn_done",(vpn_data)=>
+	{
+		$(".username").val(vpn_data['username']);
+		$(".data_limit").val(vpn_data['data_limit']);
+		$(".days").val(vpn_data['days']);
+		$(".country").val(vpn_data['country']);
+		$(".country_fake_input").html(vpn_data['country']);
+	});
+
+	socket.on("err",(msg)=>
+	{
+		alert_error(msg)
+	});
+
+
+function alert_error(str)
+{
+	$(".alerter span").html(str);
+	$(".alerter").css("display","flex");
+	
+	setTimeout(function()
+	{
+		$(".alerter").css("opacity","1");
+		$(".alerter").css("transform","scale(1)");
+	},200);
+
+	setTimeout(function()
+	{
+		$(".alerter").css("transform","scale(0.9)");
+		$(".alerter").css("opacity","0");
+		setTimeout(function()
+		{
+			$(".alerter").css("display","none");
+		},200);
+
+	},2000);
+}
+
+
+var is_about_to_delete_id = 0;
+var is_about_to_delete_marzban_id = 0;
+
+function resume_delete()
+{
+delete_vpn(is_about_to_delete_id,is_about_to_delete_marzban_id);
+	$(".step_two_container").css("opacity","0");
+
+	setTimeout(function()
+	{
+		$(".step_two_container").css("display","none");
+	},400);
+}
+
+function cancel_delete()
+{
+	$(".step_two_container").css("opacity","0");
+
+	setTimeout(function()
+	{
+		$(".step_two_container").css("display","none");
+	},400);
+}
+
+$(".step_two_background").click(function()
+{
+	$(".step_two_container").css("opacity","0");
+
+	setTimeout(function()
+	{
+		$(".step_two_container").css("display","none");
+	},400);
+});
+
+function delete_vpn_popup(event,id,marzban_id)
+{
+	is_about_to_delete_id = id;
+	is_about_to_delete_marzban_id = marzban_id;
+	$(".step_two_container").css("display","flex");
+
+	setTimeout(function()
+	{
+		$(".step_two_container").css("opacity","1");
+	},0);
+
+event.stopPropagation();
+}
+
+function delete_vpn(id,marzban_id)
+{
+socket.emit("delete_vpn",{id:id,panel_id:panel_id,marzban_id:marzban_id,on_page:on_page});
+event.stopPropagation();
+}
+
+function reset_vpn(event,id,marzban_id)
+{
+socket.emit("reset_vpn",{id:id,panel_id:panel_id,marzban_id:marzban_id,on_page:on_page});
+event.stopPropagation();
+}
+
+function toggle_vpn(event,id,marzban_id)
+{
+socket.emit("toggle_vpn",{id:id,panel_id:panel_id,marzban_id:marzban_id,on_page:on_page});
+event.stopPropagation();
+}
+
+socket.on("delete_vpn_done",(vpn_data)=>
+{
+refresh_list(vpn_data);
+});
+
+socket.on("reset_vpn_done",(vpn_data)=>
+{
+refresh_list(vpn_data);
+});
+
+socket.on("toggle_vpn_done",(vpn_data)=>
+{
+refresh_list(vpn_data);
+});
+
+
+socket.on("render_page_done",(vpn_data)=>
+{
+refresh_list(vpn_data);
+});
+
+
+
+function copy_txt(event,id,mode)
+{
+var txt;
+
+	for(let i=0;i<panel_obj_start.accounts.length;i++)
+	{
+		if(panel_obj_start.accounts[i].id == id) 
+		{
+			if(mode==1)
+			{
+				txt = panel_obj_start.accounts[i].url;
+
+				$(`.copy_link:eq(${i})`).css("opacity","0");
+
+				setTimeout(function()
+				{
+					$(`.copy_link:eq(${i})`).attr("src","images/checked.png");
+					$(`.copy_link:eq(${i})`).css("opacity","1");	
+				},200);
+
+				setTimeout(function()
+				{
+					$(`.copy_link:eq(${i})`).css("opacity","0");
+				},800);
+
+				setTimeout(function()
+				{
+					$(`.copy_link:eq(${i})`).attr("src","images/link.png");
+					$(`.copy_link:eq(${i})`).css("opacity","1");
+				},1000);
+			}
+			if(mode==2)
+			{
+				txt = panel_obj_start.accounts[i].link;
+
+				$(`.copy_config:eq(${i})`).css("opacity","0");
+
+				setTimeout(function()
+				{
+					$(`.copy_config:eq(${i})`).attr("src","images/checked.png");
+					$(`.copy_config:eq(${i})`).css("opacity","1");	
+				},200);
+
+				setTimeout(function()
+				{
+					$(`.copy_config:eq(${i})`).css("opacity","0");
+				},800);
+
+				setTimeout(function()
+				{
+					$(`.copy_config:eq(${i})`).attr("src","images/copy.png");
+					$(`.copy_config:eq(${i})`).css("opacity","1");
+				},1000);
+			}
+		break;
+		}
+		
+	}
+
+navigator.clipboard.writeText(txt);
+event.stopPropagation();
+}
+
+function qr_code(event,id)
+{
+
+
+	for(var i=0;i<panel_obj_start.accounts.length;i++)
+	{
+		if(panel_obj_start.accounts[i].id == id) 
+		{
+			document.querySelectorAll(".qrcode")[0].innerHTML = "";
+			new QRCode(document.querySelectorAll(".qrcode")[0], panel_obj_start.accounts[i].url + " ".repeat(220 - panel_obj_start.accounts[i].url.length));
+			for(var j=0;j<6;j++)
+			{
+				document.querySelectorAll(".qrcode")[j+1].innerHTML = "";
+				new QRCode(document.querySelectorAll(".qrcode")[j+1], panel_obj_start.accounts[i].link.split("\n")[j] + " ".repeat( (220 - panel_obj_start.accounts[i].link.split("\n")[j].length)>0?(220 - panel_obj_start.accounts[i].link.split("\n")[j].length):0 ) );
+			}
+				
+			break;
+		}
+		
+	}
+
+	$(".qrcode_container").css("display","flex");
+
+	setTimeout(function()
+	{
+		$(".qrcode_container").css("opacity","1");
+	},0);
+
+	$(".qrcode_counter").html("۱ / ۷");
+	qrcode_current_location = 0;
+	$(".qrcodes_inner").css("transform","translateX(0)");
+
+	event.stopPropagation();
+}
+
+
+var qrcode_current_location = 0;
+
+$(".qrcode_background").click(function()
+{
+	$(".qrcode_container").css("opacity","0");
+
+	setTimeout(function()
+	{
+		$(".qrcode_container").css("display","none");
+	},400);
+});
+
+$(".qrcode_next").click(function()
+{
+	if(qrcode_current_location >= -256*5) 
+	{
+		qrcode_current_location-=256;
+		$(".qrcodes_inner").css("transform","translateX("+qrcode_current_location+"px)");
+		$(".qrcode_counter").html(e2p((-qrcode_current_location/256)+1)+" / ۷");
+	}
+});
+
+$(".qrcode_previous").click(function()
+{
+	if(qrcode_current_location <= -256*1) 
+	{
+		qrcode_current_location+=256;
+		$(".qrcodes_inner").css("transform","translateX("+qrcode_current_location+"px)");
+		$(".qrcode_counter").html(e2p((-qrcode_current_location/256)+1)+" / ۷");
+	}
+});
+
+var persian_letters_regex = /[\u0600-\u06FF\s]/;
+
+$("input").keydown((event) => 
+{
+	if(persian_letters_regex.test(event.key))
+	{
+		event.preventDefault();
+	}
+});
+
+
+function refresh_list(obj)
+{
+	panel_obj_start = obj;
+	document.querySelector(".panel_header_data_used").innerHTML = e2p(obj['used_data']) + " GB";
+	document.querySelector(".panel_header_data_usable").innerHTML = e2p(obj['data_size']) + " GB";
+
+	var remained_data = obj['data_size'];
+	
+	for(var i=0;i<obj['accounts'].length;i++)
+	{
+	remained_data += obj['accounts'][i].data_limit;
+	remained_data -= obj['accounts'][i].data_used;
+	}
+	
+	document.querySelector(".panel_header_remained_data").innerHTML = e2p(remained_data) + " GB";
+
+
+
+	document.querySelector(".user_vpn_container").innerHTML = '';
+
+	for(var i=0;i<obj['accounts'].length;i++)
+	{
+		document.querySelector(".user_vpn_container").innerHTML +=`
+
+			<div class="user_vpn vpn_status${obj['accounts'][i]['status']}" vpn_id="${obj['accounts'][i]['id']}" onclick="get_vpn(${obj['accounts'][i]['id']},${obj['accounts'][i]['marzban_id']})" >
+		
+			<span class="user_vpn_name" > <span class="user_vpn_name_txt" > ${obj['accounts'][i]["username"]} </span> <span class="marzban_ref" >${marzban_obj_start[obj['accounts'][i]["marzban_id"]]}</span> </span>
+			<span class="user_vpn_days_container" > <span class="user_vpn_days" >${obj['accounts'][i]["days"]}</span> <span>روز</span> </span>
+			<span class="user_vpn_data" >${obj['accounts'][i]["data_used"]} GB / ${obj['accounts'][i]["data_limit"]} GB</span>
+			<span class="user_vpn_config" >
+				<span class="inner_user_vpn_config" >
+					<img class="settings copy_link" title="کپی لینک" onclick="copy_txt(event,${obj['accounts'][i]['id']},1)" src="images/link.png">
+					<img class="settings copy_config" title="کپی کانفیگ" onclick="copy_txt(event,${obj['accounts'][i]['id']},2)" src="images/copy.png">
+					<img class="settings" title="QR CODE" onclick="qr_code(event,${obj['accounts'][i]['id']})" src="images/scan.png">
+					<img class="settings" title="ریست" onclick="reset_vpn(event,${obj['accounts'][i]['id']},${obj['accounts'][i]['marzban_id']})" src="images/reset.png">
+					<img class="settings" title="فعال / غیر فعال کردن" onclick="toggle_vpn(event,${obj['accounts'][i]['id']},${obj['accounts'][i]['marzban_id']})" src="images/power.png">
+					<img class="settings" title="حذف" onclick="delete_vpn_popup(event,${obj['accounts'][i]['id']},${obj['accounts'][i]['marzban_id']})" src="images/delete.png">
+				</span>
+			</span>
+			
+			</div>`;
+
+	}
+
+
+farsify();
+}
+
+
+
+
+
+</script>
+
+</body>
+
+</html>
