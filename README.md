@@ -5,7 +5,7 @@
   کنید
 </h4>
   
-  #  :large_blue_diamond: تصاویری از محیط اپلیکیشن
+  #  :small_blue_diamond: تصاویری از محیط اپلیکیشن
 
 <p align="center">
 <img src="public/images/prv11.png">
